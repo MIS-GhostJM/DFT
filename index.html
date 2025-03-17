@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Fingerprint Tool</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            width: 90%;
+            max-width: 700px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header {
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #555;
+            font-size: 16px;
+            margin-bottom: 0;
+        }
+        
+        .fingerprint-display {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .fingerprint-value {
+            font-family: monospace;
+            font-size: 18px;
+            word-break: break-all;
+            color: #333;
+            margin: 10px 0;
+        }
+        
+        .details-section {
+            margin-top: 30px;
+            text-align: left;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        
+        .details-section h2 {
+            font-size: 18px;
+            color: #444;
+            margin-bottom: 15px;
+        }
+        
+        .component-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .component-table th, 
+        .component-table td {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        
+        .component-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        .action-buttons {
+            margin-top: 20px;
+        }
+        
+        .action-button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.2s;
+        }
+        
+        .action-button:hover {
+            background-color: #0052a3;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            font-size: 12px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fa-solid fa-fingerprint"></i> Device Fingerprint Tool</h1>
+            <p>This tool displays the unique fingerprint of your current device</p>
+        </div>
+        
+        <div class="fingerprint-display">
+            <h2>Your Device Fingerprint</h2>
+            <div id="fingerprint-value" class="fingerprint-value">
+                Generating fingerprint...
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button id="copy-button" class="action-button">
+                <i class="fa-solid fa-copy"></i> Copy Fingerprint
+            </button>
+            <button id="refresh-button" class="action-button">
+                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+            </button>
+        </div>
+        
+        <div class="details-section">
+            <h2>Fingerprint Components</h2>
+            <table class="component-table">
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody id="components-table-body">
+                    <tr>
+                        <td colspan="2">Loading component information...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function generateDeviceFingerprint() {
+            const components = [
+                navigator.userAgent,
+                screen.width,
+                screen.height,
+                screen.colorDepth,
+                navigator.language,
+                new Date().getTimezoneOffset(),
+                navigator.hardwareConcurrency || "",
+                navigator.maxTouchPoints || "",
+                navigator.platform || "",
+                getGPUInfo() || ""
+            ];
+            
+            // Create a fingerprint from components
+            const fingerprint = components.join('•');
+            
+            // Hash the fingerprint
+            return hashString(fingerprint);
+        }
+
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return hash.toString(16) + '-' + Math.abs(hash).toString(16);
+        }
+
+        function getGPUInfo() {
+            try {
+                if (window.WebGLRenderingContext) {
+                    const canvas = document.createElement('canvas');
+                    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                    if (gl) {
+                        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                        if (debugInfo) {
+                            const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                            const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+                            return renderer + '|' + vendor;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('WebGL detection failed:', e);
+            }
+            return "";
+        }
+        function getComponentsForDisplay() {
+            return [
+                { name: "User Agent", value: navigator.userAgent },
+                { name: "Screen Resolution", value: `${screen.width}x${screen.height}` },
+                { name: "Color Depth", value: `${screen.colorDepth} bits` },
+                { name: "Language", value: navigator.language },
+                { name: "Timezone Offset", value: `${new Date().getTimezoneOffset()} minutes` },
+                { name: "CPU Cores", value: navigator.hardwareConcurrency || "Not available" },
+                { name: "Touch Points", value: navigator.maxTouchPoints || "Not available" },
+                { name: "Platform", value: navigator.platform || "Not available" },
+                { name: "GPU Info", value: getGPUInfo() || "Not available" }
+            ];
+        }
+
+        function updateFingerprintDisplay() {
+            // Update fingerprint value
+            const fingerprint = generateDeviceFingerprint();
+            document.getElementById('fingerprint-value').textContent = fingerprint;
+            
+            // Update components table
+            const components = getComponentsForDisplay();
+            const tableBody = document.getElementById('components-table-body');
+            
+            // Clear existing rows
+            tableBody.innerHTML = '';
+            
+            // Add component rows
+            components.forEach(component => {
+                const row = document.createElement('tr');
+                
+                const nameCell = document.createElement('td');
+                nameCell.textContent = component.name;
+                
+                const valueCell = document.createElement('td');
+                valueCell.textContent = component.value;
+                valueCell.style.wordBreak = 'break-all';
+                
+                row.appendChild(nameCell);
+                row.appendChild(valueCell);
+                tableBody.appendChild(row);
+            });
+        }
+        function copyFingerprintToClipboard() {
+            const fingerprint = document.getElementById('fingerprint-value').textContent;
+            
+            navigator.clipboard.writeText(fingerprint)
+                .then(() => {
+                    // Visual feedback for successful copy
+                    const copyButton = document.getElementById('copy-button');
+                    const originalText = copyButton.innerHTML;
+                    
+                    copyButton.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+                    copyButton.style.backgroundColor = '#28a745';
+                    
+                    setTimeout(() => {
+                        copyButton.innerHTML = originalText;
+                        copyButton.style.backgroundColor = '#0066cc';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert('Unable to copy fingerprint. Please select and copy it manually.');
+                });
+        }
+
+        // Set up event listeners when DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initial update
+            updateFingerprintDisplay();
+            
+            // Set up button actions
+            document.getElementById('copy-button').addEventListener('click', copyFingerprintToClipboard);
+            document.getElementById('refresh-button').addEventListener('click', updateFingerprintDisplay);
+        });
+    </script>
+</body>
+</html>
